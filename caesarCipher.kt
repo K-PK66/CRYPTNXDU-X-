@@ -1,9 +1,8 @@
 //TIP To <b>Run</b> code, press <shortcut actionId="Run"/> or
 // click the <icon src="AllIcons.Actions.Execute"/> icon in the gutter.
-import java.util.*
 import kotlin.*
-import java.lang.*
-private fun CaesarCipher(text:String,key:Int,decryptMode:Boolean): String {
+
+private fun caesarCipher(text:String, key:Int, decryptMode:Boolean): String {
     val newKey=when(decryptMode){
         true -> 26-key
         else -> key
@@ -11,8 +10,6 @@ private fun CaesarCipher(text:String,key:Int,decryptMode:Boolean): String {
     val textChars=text.toCharArray()
     val ansChars=CharArray(textChars.size)
     for(i in textChars.indices){
-        //TIP Press <shortcut actionId="Debug"/> to start debugging your code. We have set one <icon src="AllIcons.Debugger.Db_set_breakpoint"/> breakpoint
-        // for you, but you can always add more by pressing <shortcut actionId="ToggleLineBreakpoint"/>.
         if(textChars[i] in 'A'..'Z'){
             ansChars[i] = ((textChars[i].code-'A'.code+newKey)%26+'a'.code).toChar()
         }
@@ -27,8 +24,6 @@ private fun CaesarCipher(text:String,key:Int,decryptMode:Boolean): String {
 }
 private fun main() {
     print("Enter the text to be processed: ")
-    //TIP Press <shortcut actionId="ShowIntentionActions"/> with your caret at the highlighted text
-    // to see how IntelliJ IDEA suggests fixing it.
     val toBeProcessed:String = readln()
     print("Enter the key: ")
     val key=readln().toInt()
@@ -45,7 +40,7 @@ private fun main() {
         1->true
         else->false
     }
-    val final=CaesarCipher(toBeProcessed,key,modeFlag)
+    val final=caesarCipher(toBeProcessed,key,modeFlag)
     print(when(modeFlag){
         true->"Decryption "
         else->"Encryption "
