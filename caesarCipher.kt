@@ -40,7 +40,7 @@ private fun main() {
             print("ERROR: You should input 1 or 0.")
         }
         else break
-    }while(1==1)
+    }while(true)
     val modeFlag:Boolean=when(flag){
         1->true
         else->false
