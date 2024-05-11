@@ -1,4 +1,7 @@
-terSpec
+import javax.crypto.Cipher
+import javax.crypto.KeyGenerator
+import javax.crypto.SecretKey
+import javax.crypto.spec.IvParameterSpec
 import kotlin.*
 
 private fun AESKeyGenerator(size:Int):SecretKey{
@@ -67,3 +70,4 @@ private fun main(){
     val decryptedData=symmetricKeyCipher(encryptedData,myKey,true,modeFlag)
     println("Decryption complete. Result after decryption: ${decryptedData.contentToString()}")
     println("Which can be transcode as: ${String(decryptedData)}")
+}
