@@ -1,6 +1,8 @@
 import kotlin.random.Random
 
+// Functions of Mathematical Methods
 private fun euclid4GCDPlus(a: Int, b: Int): Triple<Int, Int, Int> {
+    //Extended Euclid Methods are used to search for a solution to the equation ax+by=1.
     return if (b == 0) {
         Triple(1, 0, a)
     } else {
@@ -10,6 +12,7 @@ private fun euclid4GCDPlus(a: Int, b: Int): Triple<Int, Int, Int> {
 }
 
 private fun euclid4GCD(a: Int, b: Int): Int {
+    //Euclid Methods are employed to find the greatest common divisor of 2 numbers
     return if (a % b == 0) {
         b
     } else {
@@ -18,6 +21,7 @@ private fun euclid4GCD(a: Int, b: Int): Int {
 }
 
 private fun montgomeryModularMultiplication4Mod(base: Int, exponent: Int, n: Int): Int {
+    //Montgomery Modular Multiplication Methods are applied for calculate the mod for an exponential number.
     val binArray = exponent.toString(2).reversed().toCharArray()
     val r = binArray.size
     val baseArray = mutableListOf<Int>()
@@ -38,6 +42,7 @@ private fun montgomeryModularMultiplication4Mod(base: Int, exponent: Int, n: Int
     return result
 }
 
+//Functions for cipher
 private fun keyPairGenerator(p: Int, q: Int): Pair<Pair<Int, Int>, Pair<Int, Int>> {
     val n = p * q
     val phi = (p - 1) * (q - 1)
@@ -96,6 +101,7 @@ private fun randomPrimeGenerator(x: Int): Int {
     }
 }
 
+//Application
 private fun main() {
     //Prime Number Prompt
     println("Please select 2 PRIME numbers for key pair generation.")
