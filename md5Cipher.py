@@ -29,7 +29,7 @@ m_4 = (0, 7, 14, 5, 12, 3, 10, 1, 8, 15, 6, 13, 4, 11, 2, 9)
 
 
 # 定义函数，用来产生常数T[i]，常数有可能超过32位，同样需要&0xffffffff操作。注意返回的是十进制的数。
-def T(i):
+def constantGenerator(i):
     result = (int(4294967296 * abs(math.sin(i)))) & 0xffffffff
     return result
 
@@ -41,14 +41,14 @@ def shift(shift_list):
 
 
 # 定义主要的函数，参数为当做种子的列表，每轮用到的F，G，H，I，生成的M[]，以及循环左移的位数。该函数完成一轮运算。
-def fun(fun_list, f, m, shi):
+def md5Cipher(fun_list, f, m, shi):
     count = 0
-    global Ti_count
+    global constantGeneratorApplicationTimeCount
     # 引入全局变量，T(i)是从1到64循环的。
     while count < 16:
         xx = int(fun_list[0], 16) + f(int(fun_list[1], 16), int(fun_list[2], 16), int(fun_list[3], 16)) + int(m[count],
-                                                                                                              16) + T(
-            Ti_count)
+                                                                                                              16) + constantGenerator(
+            constantGeneratorApplicationTimeCount)
         xx = xx & 0xffffffff
         ll = L(xx, shi[count])
         # fun_list[0] = hex((int(fun_list[1],16) + ll)&(0xffffffff))[:-1]
@@ -56,7 +56,7 @@ def fun(fun_list, f, m, shi):
         # 最后的[:-1]是为了去除类似'0x12345678L'最后的'L'
         fun_list = shift(fun_list)
         count += 1
-        Ti_count += 1
+        constantGeneratorApplicationTimeCount += 1
         # print(fun_list)
     return fun_list
 
@@ -101,7 +101,7 @@ def show_result(f_list):
 # 程序主循环
 while True:
     abcd_list = [hexStrA, hexStrB, hexStrC, hexStrD]
-    Ti_count = 1
+    constantGeneratorApplicationTimeCount = 1
     # input_m = raw_input('msg>>>')
     input_m = input('MSG>>>')
     # 对每一个输入先添加一个'0x80'，即'10000000'
@@ -135,10 +135,10 @@ while True:
         order_3 = m16Generator(m_3, ascii_list, i)
         order_4 = m16Generator(m_4, ascii_list, i)
         # 主要四轮运算，注意打印结果列表已经被进行过右移操作！
-        abcd_list = fun(abcd_list, F, order_1, shi_1)
-        abcd_list = fun(abcd_list, G, order_2, shi_2)
-        abcd_list = fun(abcd_list, H, order_3, shi_3)
-        abcd_list = fun(abcd_list, I, order_4, shi_4)
+        abcd_list = md5Cipher(abcd_list, F, order_1, shi_1)
+        abcd_list = md5Cipher(abcd_list, G, order_2, shi_2)
+        abcd_list = md5Cipher(abcd_list, H, order_3, shi_3)
+        abcd_list = md5Cipher(abcd_list, I, order_4, shi_4)
         # 将最后输出与最初128位种子相加，注意，最初种子不能直接使用abcd_list[0]等，因为abcd_list已经被改变
         output_a = hex((int(abcd_list[0], 16) + int(aa, 16)) & 0xffffffff)
         output_b = hex((int(abcd_list[1], 16) + int(bb, 16)) & 0xffffffff)
@@ -147,7 +147,7 @@ while True:
         # 将输出放到列表中，作为下一次128位种子
         abcd_list = [output_a, output_b, output_c, output_d]
         # 将全局变量Ti_count恢复，一遍开始下一个分组的操作。
-        Ti_count = 1
+        constantGeneratorApplicationTimeCount = 1
         # 最后调用函数，格式化输出
     print('MD5>>>' + show_result(abcd_list))
     break
