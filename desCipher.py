@@ -2,6 +2,7 @@
 # 这些矩阵使用时下标要减一
 # IP置换作用于进行16轮f函数作用之前，IP逆置换作用于16轮f函数作用之后
 # IP置换表
+import os
 import time
 
 IP_table = [58, 50, 42, 34, 26, 18, 10, 2,
@@ -500,7 +501,7 @@ def DES(text, key, optionType):
 def main():
     text = input("MSG>>>>>>>>>> ")
     # str0.join([str1,str2])
-    print(" ".join(["GOT>>>>>>>>>>", text]))
+    print(" ".join(["GOTCHA>>>>>>>", text]))
     length = len(text)
     key = input("PWD>>>>>>>>>> ")
     while len(key) != 8:
@@ -509,7 +510,7 @@ def main():
     encResult = ""
     decResult = ""
     # optionType = input("MODE(EN0/DE1)>> ")
-    
+
     # 若输入文本的长度不是4的整数倍（即不是64字节的整数倍）则需用用空格补全。
     # 此处为了加密中文，用的是unicode编码，即用16字节表示一个字符。
     # if optionType == "0":
@@ -531,7 +532,7 @@ def main():
         print(".", end="")
         time.sleep(1)
     print("", end="\r")
-  
+
     # else:
     # 若输入文本的长度不是8的整数倍（即不是64字节的整数倍）则需要用空格补全。
     # 此处解密出来的密文用的是每8bit转换为一个ascii码，所以生成的是用八位表示的字符
