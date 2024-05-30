@@ -1,9 +1,9 @@
+import time
+
 # 淫趴矩阵（imperative matrix）
 # 这些矩阵使用时下标要减一
 # IP置换作用于进行16轮f函数作用之前，IP逆置换作用于16轮f函数作用之后
 # IP置换表
-import os
-import time
 
 IP_table = [58, 50, 42, 34, 26, 18, 10, 2,
             60, 52, 44, 36, 28, 20, 12, 4,
@@ -129,39 +129,39 @@ extend_table = [32, 1, 2, 3, 4, 5,
 
 # --------------------------从字符到bit--------------------------
 # 将字符转换为对应的Unicode码，中文用2个字节表示
-def char2unicode_ascii(intext, length):
-    outtext = []
+def char2unicode_ascii(toBeProcessed, length):
+    result = []
     for i in range(length):
         # ord是chr()的及配对函数，以‘c’“c”做为参数
         # 返回对应的ASCII或Unicode数值，若超出，返回TypeError
-        outtext.append(ord(intext[i]))
-    return outtext
+        result.append(ord(toBeProcessed[i]))
+    return result
 
 
 # 将Unicode码转为bit
-def unicode2bit(intext, length):
-    outbit = []
+def unicode2bit(toBeProcessed, length):
+    resultBit = []
     for i in range(length * 16):
         # 每一位Unicode都是16bit组成
-        # intext[int(i/16)]length*16:对应intext中的每一个Unicode，进行16次操作
+        # 2bProcessed[int(i/16)]length*16:对应待处理文本中的每一个Unicode，进行16次操作
         # 每轮操作右移0,1,2...,15位，然后与1且运算，一次得到16bit
-        # ！！！得到的这16位bit是个逆序
-        outbit.append(intext[int(i / 16)] >> (i % 16) & 1)
-    return outbit
+        # ！！！得到的这16位resultBit是个逆序
+        resultBit.append(toBeProcessed[int(i / 16)] >> (i % 16) & 1)
+    return resultBit
 
 
 # 将8位ASCII码转为bit
-def byte2bit(inchar, length):
-    outbit = []
+def byte2bit(charToBeProcessed, length):
+    resultBit = []
     for i in range(length * 8):
         # 原理同上
-        outbit.append(inchar[int(i / 8)] >> (i % 8) & 1)
-    return outbit
+        resultBit.append(charToBeProcessed[int(i / 8)] >> (i % 8) & 1)
+    return resultBit
 
 
 # --------------------------从bit到字符--------------------------
 # 将bit转为Unicode码
-def bit2unicode(inbit, length):
+def bit2unicode(bitToBeProcessed, length):
     out = []
     temp = 0
     for i in range(length):
@@ -170,7 +170,7 @@ def bit2unicode(inbit, length):
         # 每16位bit，对应着一位Unicode，
         # 所以当i对16求模，余数为15时
         # 将append(temp),并且重新设置temp为0
-        temp = temp | (inbit[i] << (i % 16))
+        temp = temp | (bitToBeProcessed[i] << (i % 16))
         if i % 16 == 15:
             out.append(temp)
             temp = 0
@@ -178,11 +178,11 @@ def bit2unicode(inbit, length):
 
 
 # 将bit转为ascii码
-def bit2byte(inbit, length):
+def bit2byte(bitToBeProcessed, length):
     out = []
     temp = 0
     for i in range(length):
-        temp = temp | (inbit[i] << (i % 8))
+        temp = temp | (bitToBeProcessed[i] << (i % 8))
         if i % 8 == 7:
             out.append(temp)
             temp = 0
@@ -190,21 +190,21 @@ def bit2byte(inbit, length):
 
 
 # 将unicode码转为字符（中文或英文）
-def unicode2char(inbyte, length):
+def unicode2char(byteToBeProcessed, length):
     out = ""
     for i in range(length):
-        out = out + chr(inbyte[i])
+        out = out + chr(byteToBeProcessed[i])
     return out
 
 
 # ------------------生成每一轮的key------------------
-def createKeys(inkeys):
+def createKeys(keyToBeProcessed):
     keyResult = []
     # 将char型秘钥转化为bit型
-    asciikey = char2unicode_ascii(inkeys, len(inkeys))
-    keyinit = byte2bit(asciikey, len(asciikey))
-    # print("keyinit = ", end = '')
-    # print(keyinit)
+    key_ascii_ver = char2unicode_ascii(keyToBeProcessed, len(keyToBeProcessed))
+    initialKey = byte2bit(key_ascii_ver, len(key_ascii_ver))
+    # print("initialKey = ", end = '')
+    # print(initialKey)
     # 用0初始化列表key0，key1,
     key0 = [0 for i in range(56)]
     key1 = [0 for i in range(48)]
@@ -212,12 +212,12 @@ def createKeys(inkeys):
     # 用压缩置换表1，不考虑每字节的第8位，
     # 将64位密码压缩为56位
     for i in range(56):
-        key0[i] = keyinit[yasuo1_table[i] - 1]
+        key0[i] = initialKey[yasuo1_table[i] - 1]
 
     # 进行16轮的密码生成
     for i in range(16):
         # ---------------确定左移的次数---------------
-        if (i == 0 or i == 1 or i == 8 or i == 15):
+        if i == 0 or i == 1 or i == 8 or i == 15:
             movestep = 1
         else:
             movestep = 2
@@ -260,7 +260,7 @@ def createKeys(inkeys):
 
 
 '''
-#用来检验代码
+# 用来检验代码
 key0 = [57,49,41,33,25,17,9,
         1,58,50,42,34,26,18,
         10,2,59,51,43,35,27,
@@ -271,7 +271,7 @@ key0 = [57,49,41,33,25,17,9,
         21,13,5,28,20,12,4]
 
 
-#以组为单位左移
+# 以组为单位左移
 temp = key0[0]
 for k in range(27):
     key0[k] = key0[k+1]
@@ -319,10 +319,7 @@ def DES(text, key, optionType):
 
         L = initTrans[:32]
         R = initTrans[32:]
-        # print("lkasdjfklsjdflksdfj")
-        # print("L and R",L,R)
-        # print('initTrans:',initTrans)
-        # print("bittext:",bitText)
+
         # 开始进行16轮运算
         for i in range(16):
             # 临时存放R
@@ -334,13 +331,13 @@ def DES(text, key, optionType):
             # print(len(keyResult))
 
             # 第i轮的秘钥，从keyResult中取出
-            keyi = [keyResult[j] for j in range(i * 48, i * 48 + 48)]
-            # print(i,keyi)
+            key_i = [keyResult[j] for j in range(i * 48, i * 48 + 48)]
+            # print(i,key_i)
             # ---------与key进行异或运算--------
             # 初始化
             XORResult = [0 for j in range(48)]
             for j in range(48):
-                if keyi[j] != extendR[j]:
+                if key_i[j] != extendR[j]:
                     XORResult[j] = 1
             # ----------------------------------
 
@@ -358,7 +355,7 @@ def DES(text, key, optionType):
                     SResult[k * 4 + m] = (temp >> m) & 1
             # ---------------------------------
             # if i == 0:
-            #    print('PRsult is :;；：',PResult)
+            #    print('PResult is :;；：',PResult)
 
             # -------------开始进行P盒置换-------------
             # 初始化
@@ -438,12 +435,12 @@ def DES(text, key, optionType):
             # print(len(keyResult))
 
             # 第i轮的秘钥，从keyResult中取出
-            keyi = [keyResult[j] for j in range(i * 48, i * 48 + 48)]
+            key_i = [keyResult[j] for j in range(i * 48, i * 48 + 48)]
             # ---------与key进行异或运算--------
             # 初始化
             XORResult = [0 for j in range(48)]
             for j in range(48):
-                if keyi[j] != extendR[j]:
+                if key_i[j] != extendR[j]:
                     XORResult[j] = 1
             # ----------------------------------
 
@@ -543,7 +540,7 @@ def main():
         newTempText = [encResult[j] for j in range(i * 8, i * 8 + 8)]
         decResult = "".join([decResult, DES(newTempText, key, 1)])
     print(decResult)
-    print("RESULT>>>>>>> " + str(decResult == text))
+    print("SUCCESS?>>>>> " + str(decResult == text))
 
 
 main()
