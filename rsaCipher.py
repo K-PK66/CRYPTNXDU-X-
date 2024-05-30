@@ -10,6 +10,7 @@ def extend_gcd(e, m):
         x, y = y, x - (e // m) * y
         return x, y, gcd
 
+
 def generate_key_pair(p, q):
     n = p * q  # n
     L = (p - 1) * (q - 1)
@@ -46,6 +47,7 @@ class RSA:
         print(f"n: {self.n} key:{self.key}")
         pass
 
+
 def Encode2int(S):
     int_list = []
     for i in range(len(S)):
@@ -61,37 +63,36 @@ def Decode2chr(L):
 
 
 def main():
-    
     p, q = 181, 281
 
-    ### 产生密钥对
+    # 产生密钥对
     prvKeyPair, pubKeyPair = generate_key_pair(p, q)
 
-    ### 公钥公开给Encrypter
+    # 公钥公开给Encrypter
     Encrypter = RSA(prvKeyPair)
 
-    ### 私钥保存
+    # 私钥保存
     Decrypter = RSA(pubKeyPair)
 
-    ### 待加密信息
+    # 待加密信息
     M = input("输入待处理文本：")  # 保证明文中的每个字符 ASCII 值小于 p*q
     print(f"明  文: {M}")
 
-    ### 加密
-    #### 转码为整数列
+    # 加密
+    ## 转码为整数列
     M_encode = Encode2int(M)
     print(f"转码后：{M_encode}")
-    #### 加密整数列
+    ## 加密整数列
     E_ = Encrypter.Encrypt(M_encode)
     print(f"加密后：{E_}")
-    #### 密文
+    ## 密文
     E = Decode2chr(E_)
     print(f"密  文：{E}")
 
-    ### 解密
-    #### 转码为整数列
+    # 解密
+    ## 转码为整数列
     E_encode = Encode2int(E)
-    #### 解密整数列
+    ## 解密整数列
     E_encode_decrypt = Decrypter.Decrypt(E_encode)
     print(f"解密后：{E_encode_decrypt}")
     M_ = Decode2chr(E_encode_decrypt)
