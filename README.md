@@ -218,3 +218,129 @@ $a=91,b=2$
 <img src="IMG/affineSS2.png"></img>
 
 可以看到，解密的结果与原本的明文一致。
+
+### 单表置换加密
+
+自选语言设计算法，使该算法可以对文本进行单表置换加解密。
+
+#### 实验原理
+
+单表置换加密本质上是一种置换式加密；与替代式加密的不同之处在于，其可以通过打乱明文（通常是字符或字符组）中的各字符所处的相对位置而实现加密，并在打乱后生成文本密文。在没有密钥的情况下，生成的消息极难破译，因为字符有意义的排间列方式可以有很多种。
+
+单表置换加密算法中维护着一个置换表，其中记录了明文和密文的对照关系。在没有加密（即没有发生置换）之前，其置换表可以如下。
+
+<table>
+  <tr>
+    <td>明文</td><td>a</td><td>b</td><td>c</td><td>d</td><td>e</td><td>f</td><td>g</td><td>h</td><td>i</td><td>j</td><td>k</td><td>l</td><td>m</td>
+  </tr>
+  <tr>
+    <td>密文</td><td>a</td><td>b</td><td>c</td><td>d</td><td>e</td><td>f</td><td>g</td><td>h</td><td>i</td><td>j</td><td>k</td><td>l</td><td>m</td>
+  </tr>
+  <tr>
+    <td>明文</td><td>n</td><td>o</td><td>p</td><td>q</td><td>r</td><td>s</td><td>t</td><td>u</td><td>v</td><td>w</td><td>x</td><td>y</td><td>z</td>
+  </tr>
+  <tr>
+    <td>密文</td><td>n</td><td>o</td><td>p</td><td>q</td><td>r</td><td>s</td><td>t</td><td>u</td><td>v</td><td>w</td><td>x</td><td>y</td><td>z</td>
+  </tr>
+  <tr>
+    <td>明文</td><td>A</td><td>B</td><td>C</td><td>D</td><td>E</td><td>F</td><td>G</td><td>H</td><td>I</td><td>J</td><td>K</td><td>L</td><td>M</td>
+  </tr>
+  <tr>
+    <td>密文</td><td>A</td><td>B</td><td>C</td><td>D</td><td>E</td><td>F</td><td>G</td><td>H</td><td>I</td><td>J</td><td>K</td><td>L</td><td>M</td>
+  </tr>
+  <tr>
+    <td>明文</td><td>N</td><td>O</td><td>P</td><td>Q</td><td>R</td><td>S</td><td>T</td><td>U</td><td>V</td><td>W</td><td>X</td><td>Y</td><td>Z</td>
+  </tr>
+  <tr>
+    <td>密文</td><td>N</td><td>O</td><td>P</td><td>Q</td><td>R</td><td>S</td><td>T</td><td>U</td><td>V</td><td>W</td><td>X</td><td>Y</td><td>Z</td>
+  </tr>
+</table>
+
+在设定密钥为“`Munich`”后，置换表将发生改变；改变后的结果如下。
+
+<table>
+  <tr>
+    <td>明文</td><td>a</td><td>b</td><td>c</td><td>d</td><td>e</td><td>f</td><td>g</td><td>h</td><td>i</td><td>j</td><td>k</td><td>l</td><td>m</td>
+  </tr>
+  <tr>
+    <td>密文</td><td>m</td><td>u</td><td>n</td><td>i</td><td>c</td><td>h</td><td>a</td><td>b</td><td>d</td><td>e</td><td>f</td><td>g</td><td>j</td>
+  </tr>
+  <tr>
+    <td>明文</td><td>n</td><td>o</td><td>p</td><td>q</td><td>r</td><td>s</td><td>t</td><td>u</td><td>v</td><td>w</td><td>x</td><td>y</td><td>z</td>
+  </tr>
+  <tr>
+    <td>密文</td><td>k</td><td>l</td><td>o</td><td>p</td><td>q</td><td>r</td><td>s</td><td>t</td><td>v</td><td>w</td><td>x</td><td>y</td><td>z</td>
+  </tr>
+  <tr>
+    <td>明文</td><td>A</td><td>B</td><td>C</td><td>D</td><td>E</td><td>F</td><td>G</td><td>H</td><td>I</td><td>J</td><td>K</td><td>L</td><td>M</td>
+  </tr>
+  <tr>
+    <td>密文</td><td>M</td><td>U</td><td>N</td><td>I</td><td>C</td><td>H</td><td>A</td><td>B</td><td>D</td><td>E</td><td>F</td><td>G</td><td>J</td>
+  </tr>
+  <tr>
+    <td>明文</td><td>N</td><td>O</td><td>P</td><td>Q</td><td>R</td><td>S</td><td>T</td><td>U</td><td>V</td><td>W</td><td>X</td><td>Y</td><td>Z</td>
+  </tr>
+  <tr>
+    <td>密文</td><td>K</td><td>L</td><td>O</td><td>P</td><td>Q</td><td>R</td><td>S</td><td>T</td><td>V</td><td>W</td><td>X</td><td>Y</td><td>Z</td>
+  </tr>
+</table>
+
+比较后不难看出两置换表之间的区别。选用的密钥“`Munich`”将小写字母置换表区域中的`m`、`u`、`n`、`i`、`c`、`h`按密钥中的顺序提前至首位，剩余的未出现在密钥中的字母按字母表顺序排列在小写字母置换表中的剩余位置。大写字母置换表区域与其一致。
+
+#### 实验代码与运行记录
+
+##### 算法代码
+
+和仿射加密类似，算法中暗含了一个加密对照表和一个解密对照表。在加解密的过程中，只要通过对字符查找索引和根据索引查找字符即可实现置换。据此可以通过`kotlin`写出算法如下。
+
+```kotlin
+private val encryptSheet= IntArray(30)
+private val decryptSheet= IntArray(30)
+private fun sheetReferenceForIndex(c:Char):Int{
+    if (c in 'a'..'z') return c.code-'a'.code
+    return if (c in 'A'..'Z') c.code-'A'.code
+    else -1
+}
+private fun singleTableCipher(text:String,key:String,decryptMode:Boolean):String{
+    val flags=IntArray(30){_->0}
+    var k=0
+    for(i in key.indices){
+        var n = sheetReferenceForIndex(key[i])
+        if(flags[n] == 0){
+            encryptSheet[k++]=n
+            decryptSheet[n]=k-1
+            flags[n]=1
+        }
+    }
+    for(i in 0..<26){
+        if(flags[i] == 0){
+            encryptSheet[k++]=i
+            decryptSheet[i]=k-1
+        }
+    }
+    val textLen=text.length
+    val ansChars=CharArray(textLen)
+    for(i in text.indices){
+        if(text[i] in 'a' .. 'z') ansChars[i] = (when(decryptMode){
+            true->decryptSheet[text[i].code-'a'.code]
+            else->encryptSheet[text[i].code-'a'.code]
+        }+'a'.code).toChar()
+        else if(text[i] in 'A'..'Z') ansChars[i]=(when(decryptMode){
+            true->decryptSheet[text[i].code-'A'.code]
+            else->encryptSheet[text[i].code-'A'.code]
+        }+'A'.code).toChar()
+        else ansChars[i]=text[i]
+    }
+    return String(ansChars)
+}
+```
+
+##### 运行结果
+
+根据上述算法设计输入输出。以采取密钥“`Munich`”对明文“`Berlin`”进行加解密为例，可以得到运行结果如下所示。
+
+<img src="IMG/saSS1.png"></img>
+
+<img src="IMG/saSS2.png"></img>
+
+显然，解密结果和原本的明文一致。
