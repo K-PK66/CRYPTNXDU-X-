@@ -1185,8 +1185,11 @@ private fun main() {
 MD5消息摘要算法是一种被广泛使用的密码散列函数，可以通过求余、调整长度等方式产生一个特定长度的的散列值来确定信息传输始末内容的完整性和一致性。经过程序流程，MD5加密算法可以生成四个32位数据，最后联合起来成为一个128-bits散列。
 
 $$F(X,Y,Z) = (X\wedge{Y}) \vee (\neg{X} \wedge{Z})$$
+
 $$G(X,Y,Z) = (X\wedge{Z}) \vee (Y \wedge \neg{Z})$$
+
 $$H(X,Y,Z) = X \oplus Y \oplus Z$$
+
 $$I(X,Y,Z) = Y \oplus (X \vee \neg{Z})$$
 
 ### 实验代码与加密结果
