@@ -1181,3 +1181,184 @@ private fun main() {
 **实验内容**：自行选择语言编写算法，使该算法在不利用该语言自带密码库的情况下可以实现对文本的MD5加密。
 
 ### 实验原理
+
+MD5消息摘要算法是一种被广泛使用的密码散列函数，可以通过求余、调整长度等方式产生一个特定长度的的散列值来确定信息传输始末内容的完整性和一致性。经过程序流程，MD5加密算法可以生成四个32位数据，最后联合起来成为一个128-bits散列。
+
+$$F(X,Y,Z) = (X\wedge{Y}) \vee (\neg{X} \wedge{Z})$$
+$$G(X,Y,Z) = (X\wedge{Z}) \vee (Y \wedge \neg{Z})$$
+$$H(X,Y,Z) = X \oplus Y \oplus Z$$
+$$I(X,Y,Z) = Y \oplus (X \vee \neg{Z})$$
+
+### 实验代码与加密结果
+
+通过`python`编写的加密程式如下所示。
+
+```python
+import math
+
+# 定义常量，用于初始化128位变量，注意字节顺序，文中的A=0x01234567，这里低值存放低字节，即01 23 45 67，所以运算时A=0x67452301，其他类似。
+# 这里用字符串的形势，是为了和hex函数的输出统一，hex(10)输出为'0xA',注意结果为字符串。
+hexStrA = '0x67452301'
+hexStrB = '0xefcdab89'
+hexStrC = '0x98badcfe'
+hexStrD = '0x10325476'
+# 定义每轮中用到的函数。L为循环左移，注意左移之后可能会超过32位，所以要和0xffffffff做与运算，确保结果为32位。
+F = lambda x, y, z: ((x & y) | ((~x) & z))
+G = lambda x, y, z: ((x & z) | (y & (~z)))
+H = lambda x, y, z: (x ^ y ^ z)
+I = lambda x, y, z: (y ^ (x | (~z)))
+L = lambda x, n: (((x << n) | (x >> (32 - n))) & 0xffffffff)
+
+# 定义每轮中循环左移的位数，这里用4个元组表示,用元组是因为速度比列表快。
+shi_1 = (7, 12, 17, 22) * 4
+shi_2 = (5, 9, 14, 20) * 4
+shi_3 = (4, 11, 16, 23) * 4
+shi_4 = (6, 10, 15, 21) * 4
+
+# 定义每轮中用到的M[i]次序。
+m_1 = (0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15)
+m_2 = (1, 6, 11, 0, 5, 10, 15, 4, 9, 14, 3, 8, 13, 2, 7, 12)
+m_3 = (5, 8, 11, 14, 1, 4, 7, 10, 13, 0, 3, 6, 9, 12, 15, 2)
+m_4 = (0, 7, 14, 5, 12, 3, 10, 1, 8, 15, 6, 13, 4, 11, 2, 9)
+
+
+# 定义函数，用来产生常数T[i]，常数有可能超过32位，同样需要&0xffffffff操作。注意返回的是十进制的数。
+def constantGenerator(i):
+    result = (int(4294967296 * abs(math.sin(i)))) & 0xffffffff
+    return result
+
+
+# 定义函数，用来将列表中的元素循环右移。原因是在每轮操作中，先运算A的值，然后是D，C，B，16轮之后右恢复原来顺序，所以只要每次操作第一个元素即可。
+def shift(shift_list):
+    shift_list = [shift_list[3], shift_list[0], shift_list[1], shift_list[2]]
+    return shift_list
+
+
+# 定义主要的函数，参数为当做种子的列表，每轮用到的F，G，H，I，生成的M[]，以及循环左移的位数。该函数完成一轮运算。
+def md5Cipher(fun_list, f, m, shi):
+    count = 0
+    global constantGeneratorApplicationTimeCount
+    # 引入全局变量，T(i)是从1到64循环的。
+    while count < 16:
+        xx = int(fun_list[0], 16) + f(int(fun_list[1], 16), int(fun_list[2], 16), int(fun_list[3], 16)) + int(m[count],
+                                                                                                              16) + constantGenerator(
+            constantGeneratorApplicationTimeCount)
+        xx = xx & 0xffffffff
+        ll = L(xx, shi[count])
+        # fun_list[0] = hex((int(fun_list[1],16) + ll)&(0xffffffff))[:-1]
+        fun_list[0] = hex((int(fun_list[1], 16) + ll) & 0xffffffff)
+        # 最后的[:-1]是为了去除类似'0x12345678L'最后的'L'
+        fun_list = shift(fun_list)
+        count += 1
+        constantGeneratorApplicationTimeCount += 1
+        # print(fun_list)
+    return fun_list
+
+
+# 该函数生成每轮需要的M[]，最后的参数是为了当有很多分组时，进行偏移。
+def m16Generator(order, ascii_list, f_offset):
+    ii = 0
+    m16 = [0] * 16
+    f_offset = f_offset * 64
+    for i in order:
+        i = i * 4
+        m16[ii] = '0x' + ''.join((ascii_list[i + f_offset] + ascii_list[i + 1 + f_offset] + ascii_list[
+            i + 2 + f_offset] + ascii_list[i + 3 + f_offset]).split('0x'))
+        ii += 1
+    for c in m16:
+        ind = m16.index(c)
+        m16[ind] = reverse_hex(c)
+    return m16
+
+
+# 翻转十六进制数的顺序：'0x01234567' => '0x67452301'
+def reverse_hex(hex_str):
+    hex_str = hex_str[2:]
+    hex_str_list = []
+    for i in range(0, len(hex_str), 2):
+        hex_str_list.append(hex_str[i:i + 2])
+    hex_str_list.reverse()
+    hex_str_result = '0x' + ''.join(hex_str_list)
+    return hex_str_result
+
+
+# 显示结果函数，将最后运算的结果列表进行翻转，合并成字符串的操作。
+def show_result(f_list):
+    result = ''
+    f_list1 = [0] * 4
+    for i in f_list:
+        f_list1[f_list.index(i)] = reverse_hex(i)[2:]
+        result = result + f_list1[f_list.index(i)]
+    return result
+
+
+# 程序主循环
+while True:
+    abcd_list = [hexStrA, hexStrB, hexStrC, hexStrD]
+    constantGeneratorApplicationTimeCount = 1
+    input_m = input('MSG>>>')
+    # 对每一个输入先添加一个'0x80'，即'10000000'
+    ascii_list = list((map(hex, map(ord, input_m))))
+    # print('ascii_list:',ascii_list)
+    msg_length = len(ascii_list) * 8
+    ascii_list.append('0x80')
+
+    # 补充0
+    while (len(ascii_list) * 8 + 64) % 512 != 0:
+        ascii_list.append('0x00')
+
+    # 最后64为存放消息长度，注意长度存放顺序低位在前。
+    # 例如，消息为'a'，则长度为'0x0800000000000000'
+    msgLength0x = hex(msg_length)[2:]
+    msgLength0x = '0x' + msgLength0x.rjust(16, '0')
+    msgLength0xBigOrder = reverse_hex(msgLength0x)[2:]
+    msgLength0xList = []
+    for i in range(0, len(msgLength0xBigOrder), 2):
+        msgLength0xList.append('0x' + msgLength0xBigOrder[i:i + 2])
+    ascii_list.extend(msgLength0xList)
+    # print  (ascii_list)
+
+    # 对每个分组进行4轮运算
+    for i in range(0, len(ascii_list) // 64):
+        # 将最初128位种子存放在变量中，
+        aa, bb, cc, dd = abcd_list
+        # 根据顺序产生每轮M[]列表
+        order_1 = m16Generator(m_1, ascii_list, i)
+        order_2 = m16Generator(m_2, ascii_list, i)
+        order_3 = m16Generator(m_3, ascii_list, i)
+        order_4 = m16Generator(m_4, ascii_list, i)
+        # 主要四轮运算，注意打印结果列表已经被进行过右移操作！
+        abcd_list = md5Cipher(abcd_list, F, order_1, shi_1)
+        abcd_list = md5Cipher(abcd_list, G, order_2, shi_2)
+        abcd_list = md5Cipher(abcd_list, H, order_3, shi_3)
+        abcd_list = md5Cipher(abcd_list, I, order_4, shi_4)
+        # 将最后输出与最初128位种子相加，注意，最初种子不能直接使用abcd_list[0]等，因为abcd_list已经被改变
+        output_a = hex((int(abcd_list[0], 16) + int(aa, 16)) & 0xffffffff)
+        output_b = hex((int(abcd_list[1], 16) + int(bb, 16)) & 0xffffffff)
+        output_c = hex((int(abcd_list[2], 16) + int(cc, 16)) & 0xffffffff)
+        output_d = hex((int(abcd_list[3], 16) + int(dd, 16)) & 0xffffffff)
+        # 将输出放到列表中，作为下一次128位种子
+        abcd_list = [output_a, output_b, output_c, output_d]
+        # 将全局变量Ti_count恢复，一遍开始下一个分组的操作。
+        constantGeneratorApplicationTimeCount = 1
+        # 最后调用函数，格式化输出
+    print('MD5>>>' + show_result(abcd_list))
+    break
+
+```
+
+运行该程序。以加密文本“`hello md5`”为例，得到散列值如下所示：
+
+<img src="IMG/mdSS1.png" />
+
+在其他网站上使用在线md5加密工具，加密同一个文本，得到的散列值与之相同。
+
+<img src="IMG/mdSS2.png" />
+
+因此，编写的算法是正确的。
+
+### 实验心得
+
+MD5作为验证被传输信息完整性和一致性的散列值生成方式，其算法也很难被模仿出来，因此代码量也非常的大。在16进制与10进制数相互转换的时候很容易因为疏忽而错转漏转。
+
+## 实验五 密码学应用·文件加密传输试验
