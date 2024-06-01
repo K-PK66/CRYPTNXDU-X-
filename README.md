@@ -1427,7 +1427,6 @@ individualized_key_pair_generator('receiver')
 因此整个实验过程应须要`inbox`、`outbox`、`sent`、`sandbox_receiver`、`sandbox_sender`五个文件夹。在实验每次模拟开始前，可以对这些文件夹进行适当的初始化，便于在实验进行过程中查看每一步的变化：
 
 ```python
-## initialization.py ##
 # Python file to initialize the overall progress of the file transmit
 # Finished May 31 2:20 p.m.
 
@@ -1435,11 +1434,29 @@ import os
 import shutil
 
 
+def does_not_exist(directory_path):
+    if os.path.exists(directory_path):
+        return False
+    return True
+
+
 def not_empty_dir(directory_path):
     if len(os.listdir(directory_path)) == 0:
         return False
     return True
 
+
+if does_not_exist('inbox'):
+    os.mkdir('inbox')
+    
+if does_not_exist('outbox'):
+    os.mkdir('outbox')
+
+if does_not_exist('sent'):
+    os.mkdir('sent')
+
+if does_not_exist('sandbox_receiver'):
+    os.mkdir('sandbox_receiver')
 
 if not_empty_dir('inbox'):
     shutil.rmtree(r'inbox')
@@ -1497,40 +1514,39 @@ print("Compulsory files packed. Check them in the outbox.")
    ```
 2. 对加密信息所用的对称加密密钥利用接收方的非对称加密公钥进行加密，使接收方无法否认文件由他接收；
    ```python
-      def des_key_encrypt_with_rsa():
-          with open('sandbox_sender/desPassword.txt', 'r') as des_password_gotcha:
-              des_pwd = des_password_gotcha.readline()
-          with open('public_key_receiver.txt', 'r') as pub_key_radio:
-              public_key_pair_string = pub_key_radio.readline()
-          public_key_pair_string2pair_step_1 = public_key_pair_string.split(', ')
-          public_key_pair_string2pair_step_2_a = public_key_pair_string2pair_step_1[0].removeprefix('(')
-          public_key_pair_string2pair_step_2_b = public_key_pair_string2pair_step_1[1].removesuffix(')')
-          public_rsa_key_pair = int(public_key_pair_string2pair_step_2_a), int(public_key_pair_string2pair_step_2_b)
-          rsa_encrypt_service = RSA(public_rsa_key_pair)
-          encoded_password = Encode2int(des_pwd)
-          encrypted_password = rsa_encrypt_service.Encrypt(encoded_password)
-          encrypted_des_pwd_chr = Decode2chr(encrypted_password)
-          with open('outbox/encrypted_pwd_des.txt', 'w') as encrypted_des_pwd_container:
-              encrypted_des_pwd_container.write(str(encrypted_des_pwd_chr))
-              print("DES password has been encrypted.")
-   
+   def des_key_encrypt_with_rsa():
+       with open('sandbox_sender/desPassword.txt', 'r') as des_password_gotcha:
+           des_pwd = des_password_gotcha.readline()
+       with open('public_key_receiver.txt', 'r') as pub_key_radio:
+           public_key_pair_string = pub_key_radio.readline()
+           public_key_pair_string2pair_step_1 = public_key_pair_string.split(', ')
+           public_key_pair_string2pair_step_2_a = public_key_pair_string2pair_step_1[0].removeprefix('(')
+           public_key_pair_string2pair_step_2_b = public_key_pair_string2pair_step_1[1].removesuffix(')')
+           public_rsa_key_pair = int(public_key_pair_string2pair_step_2_a), int(public_key_pair_string2pair_step_2_b)
+           rsa_encrypt_service = RSA(public_rsa_key_pair)
+           encoded_password = Encode2int(des_pwd)
+           encrypted_password = rsa_encrypt_service.Encrypt(encoded_password)
+           encrypted_des_pwd_chr = Decode2chr(encrypted_password)
+           with open('outbox/encrypted_pwd_des.txt', 'w') as encrypted_des_pwd_container:
+           encrypted_des_pwd_container.write(str(encrypted_des_pwd_chr))
+           print("DES password has been encrypted.")
     ```
 3. 对确保信息完整性和一致性的散列值用发送方的非对称加密私钥进行加密作为“签名”，使发送方无法否认文件由他发送。
    ```python
-    def signature():
-        with open('sandbox_sender/private_key_sender.txt', 'r') as private_key_container:
-            private_key_pair_string = private_key_container.readline()
-        private_key_pair_string2pair_step_1 = private_key_pair_string.split(', ')
-        private_key_pair_string2pair_step_2_a = private_key_pair_string2pair_step_1[0].removeprefix('(')
-        private_key_pair_string2pair_step_2_b = private_key_pair_string2pair_step_1[1].removesuffix(')')
-        private_rsa_key_pair = int(private_key_pair_string2pair_step_2_a), int(private_key_pair_string2pair_step_2_b)
-        rsa_encrypt_service = RSA(private_rsa_key_pair)
-        encoded_hash = Encode2int(hash_abstract())
-        encrypted_hash = rsa_encrypt_service.Encrypt(encoded_hash)
-        encrypted_hash_chr = Decode2chr(encrypted_hash)
-        with open('outbox/encrypted_hash.txt', 'w') as hash_container_to_send:
+   def signature():
+       with open('sandbox_sender/private_key_sender.txt', 'r') as private_key_container:
+           private_key_pair_string = private_key_container.readline()
+       private_key_pair_string2pair_step_1 = private_key_pair_string.split(', ')
+       private_key_pair_string2pair_step_2_a = private_key_pair_string2pair_step_1[0].removeprefix('(')
+       private_key_pair_string2pair_step_2_b = private_key_pair_string2pair_step_1[1].removesuffix(')')
+       private_rsa_key_pair = int(private_key_pair_string2pair_step_2_a), int(private_key_pair_string2pair_step_2_b)
+       rsa_encrypt_service = RSA(private_rsa_key_pair)
+       encoded_hash = Encode2int(hash_abstract())
+       encrypted_hash = rsa_encrypt_service.Encrypt(encoded_hash)
+       encrypted_hash_chr = Decode2chr(encrypted_hash)
+       with open('outbox/encrypted_hash.txt', 'w') as hash_container_to_send:
             hash_container_to_send.write(str(encrypted_hash_chr))
-        print("Hash has been signed (encrypted).")
+       print("Hash has been signed (encrypted).")
    ```
 
 因此，发送方需要发送的文件显然是加密过后的信息`encrypted_msg.txt`、加密过后的对称密码`encrypted_pwd_des.txt`和加密过后的散列值`encrypted_hash.txt`三个。
@@ -1649,4 +1665,6 @@ hash_check()
 
 ### 实验心得
 
+实验过程中因为使用`python`，故不得不使用该语言的文件有关指令。在编写过程中进行调试时发现虽然`python`可以创建文件但是不能创建文件夹，因此为`initialization.py`额外增加了确认路径是否存在的操作。
 
+本次实验虽然只进行了两个午后，但加深了我对密码学中比较具有代表性的这些典型加密方式对理解。不难看出，密码之所以“密”，恰因为每时每刻都有机制在进行更新；通过多种加密方式混合使用，可以很大程度上解决并不知道收发信双方约定加/解密顺序的情况下成功破译的潜在隐患。文件加密传输是密码学综合应用的集大成之作；在我们针对此实验集中精力于收发信双方的同时，作为密钥分发者的管理员也起着非常重要的作用。如果分发密钥者没有妥善保管好双方的私钥，纵使收发双方妥善保管了依然存在传输的信息被截获或被篡改的可能。只有整个文件加密传输过程中任何一个节点都能够保证符合流程规定，这个传输的过程才可以确定是安全的。
