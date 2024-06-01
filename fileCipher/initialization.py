@@ -5,11 +5,29 @@ import os
 import shutil
 
 
+def does_not_exist(directory_path):
+    if os.path.exists(directory_path):
+        return False
+    return True
+
+
 def not_empty_dir(directory_path):
     if len(os.listdir(directory_path)) == 0:
         return False
     return True
 
+
+if does_not_exist('inbox'):
+    os.mkdir('inbox')
+    
+if does_not_exist('outbox'):
+    os.mkdir('outbox')
+
+if does_not_exist('sent'):
+    os.mkdir('sent')
+
+if does_not_exist('sandbox_receiver'):
+    os.mkdir('sandbox_receiver')
 
 if not_empty_dir('inbox'):
     shutil.rmtree(r'inbox')
