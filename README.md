@@ -1370,8 +1370,283 @@ MD5作为验证被传输信息完整性和一致性的散列值生成方式，�
 
 ### 实验内容
 
-自选语言编写代码文件若干，使这些程式在不借助这些语言自带密码库的情况下能够模拟文件的加密传输与解密且保证满足信息传输的诸多基本要求（如不可否认性、完整性等）。标注清楚发送端需要发送的文件和这些文件的产生方式，并说明接收端接收到的文件和之后的处理方式。
+自选语言编写代码文件若干，使这些程式在不借助这些语言自带密码库的情况下能够模拟文件的加密传输与解密且保证满足信息传输的诸多基本要求（如不可否认性、完整性等）。标注清楚发送端需要发送的文件和这些文件的产生方式，并说明接收端接收到的文件和之后的处理方式。发送的文件须打包发送。
 
 ### 功能实现
 
+根据实验内容主要考虑以下几个方面。加密算法的代码在前文均已提及，为减少篇幅在此不与呈现。
+
+#### 机制
+
+文件传输最经典的应用莫过于电子邮箱。因此类比电子邮箱的操作，可以将收发信两端简单模拟成一个个人电子邮箱中的`sent`（已发送）和`inbox`（收件箱）两个文件夹。注意到实验内容要求对文件进行打包发送，因此考虑电子邮箱中的`outbox`（待发送）文件夹——其将暂时存储加密之后的文件，在所有文件生成完毕后询问用户是否确定发送（类似于邮件的“确认发送倒计时”操作）。完成发送后，`outbox`中的文件将全部转移至`sent`中；如若用户在这一环节取消发送，`outbox`中的所有文件将会被销毁。
+
+```python
+## fileTransmit.py ##
+import os
+import shutil
+import time
+
+shutil.rmtree(r'inbox')
+os.makedirs('inbox')
+willingness = input("Are you sure to send all files in the outbox?\nNO(0)/YES(1)>>> ")
+if willingness == "1":
+    print("Sending", end=">")
+    time.sleep(1)
+    for i in range(10):
+        print(">", end="")
+        time.sleep(0.2)
+    shutil.move('outbox/encrypted_hash.txt', r'sent/encrypted_hash.txt')
+    shutil.move('outbox/encrypted_msg.txt', r'sent/encrypted_msg.txt')
+    shutil.move('outbox/encrypted_pwd_des.txt', r'sent/encrypted_pwd_des.txt')
+    print("\rPack sent.")
+else:
+    os.unlink(r'outbox/encrypted_hash.txt')
+    os.unlink(r'outbox/encrypted_msg.txt')
+    os.unlink(r'outbox/encrypted_pwd_des.txt')
+
+```
+
+此外，注意到收发信两端还可能需要用到的非对称加密，另需要一位作为管理者（`keyProvider`）的角色为他们分发各自的公私钥。考虑到私钥需要二人自行保管，`keyProvider`会将私钥`private_key_sender.txt`和`private_key_receiver.txt`置于双方各自的沙盒`sandbox_sender`和`sandbox_receiver`中作为隔离，公钥`public_key_sender.txt`和`public_key_receiver.txt`则将放置在公共空间中。
+
+```python
+def individualized_key_pair_generator(client):
+    p = random_prime(100, 200)
+    q = random_prime(200, 300)
+    private_rsa_key_pair, public_rsa_key_pair = generate_key_pair(p, q)
+    with open('public_key_{}.txt'.format(client), 'w') as client_pub_key:
+        client_pub_key.write(str(public_rsa_key_pair))
+    with open("sandbox_{}/private_key_{}.txt".format(client, client), 'w') as client_private_key:
+        client_private_key.write(str(private_rsa_key_pair))
+    print("Key pair for {} generated. <<p = {}, q = {}>>".format(client, p, q))
+
+
+individualized_key_pair_generator('sender')
+individualized_key_pair_generator('receiver')
+```
+
+因此整个实验过程应须要`inbox`、`outbox`、`sent`、`sandbox_receiver`、`sandbox_sender`五个文件夹。在实验每次模拟开始前，可以对这些文件夹进行适当的初始化，便于在实验进行过程中查看每一步的变化：
+
+```python
+## initialization.py ##
+# Python file to initialize the overall progress of the file transmit
+# Finished May 31 2:20 p.m.
+
+import os
+import shutil
+
+
+def not_empty_dir(directory_path):
+    if len(os.listdir(directory_path)) == 0:
+        return False
+    return True
+
+
+if not_empty_dir('inbox'):
+    shutil.rmtree(r'inbox')
+    os.mkdir(r'inbox')
+
+if not_empty_dir('sent'):
+    shutil.rmtree(r'sent')
+    os.mkdir(r'sent')
+
+if not_empty_dir('outbox'):
+    shutil.rmtree(r'outbox')
+    os.mkdir(r'outbox')
+
+os.unlink('public_key_sender.txt')
+os.unlink('public_key_receiver.txt')
+os.unlink('sandbox_sender/private_key_sender.txt')
+os.unlink('sandbox_receiver/private_key_receiver.txt')
+
+print('Initialization Complete')
+```
+
+#### 发送方
+
+发送方显然是消息的撰写者和整个流程的开端。他需要对自己撰写的信息进行加密，并且对此次加密所使用的密码也进行加密。随后，他还需要对这两个加密之后的内容都生成散列值，然后对这一散列值进行加密进行发送。为保安全，这三个文件使用同一个加密方式进行加密显然是不行的；加之需要考虑信息传输的基本安全要求，故可分别利用对称加密密钥、发送方非对称加密私钥和接收方对称加密公钥按如下方式进行加密：
+
+```python
+message_encrypt()
+des_key_encrypt_with_rsa()
+signature()
+print("Compulsory files packed. Check them in the outbox.")
+```
+
+1. 使用对称加密密钥对信息进行加密，确保文件的机密性（对称加密密钥和信息明文`sample.txt`可以直接存储在`sandbox_sender`中）；
+   ```python
+    def message_encrypt():
+        encrypted_lines = ""
+        with open('sandbox_sender/desPassword.txt', 'r') as des_password_gotcha:
+            des_pwd = des_password_gotcha.readline()
+        with open('sandbox_sender/sample.txt', 'r') as original_file:
+            original = original_file.read()
+        original_length = len(original)
+        if original_length % 4 != 0:
+            original = original + int(4 - (original_length % 4)) * " "
+        original_length = len(original)
+        encrypted_line = ""
+        for i in range(int(original_length / 4)):
+            temp_text = [original[j] for j in range(i * 4, i * 4 + 4)]
+            encrypted_line = "".join([encrypted_line, DES(temp_text, des_pwd, 0)])
+        encrypted_lines += str(encrypted_line)
+        # print(encrypted_lines)
+        with open('outbox/encrypted_msg.txt', 'w') as container_of_encrypted_contents:
+            container_of_encrypted_contents.write(encrypted_lines)
+            print("Message has been encrypted.")
+
+   ```
+2. 对加密信息所用的对称加密密钥利用接收方的非对称加密公钥进行加密，使接收方无法否认文件由他接收；
+   ```python
+      def des_key_encrypt_with_rsa():
+          with open('sandbox_sender/desPassword.txt', 'r') as des_password_gotcha:
+              des_pwd = des_password_gotcha.readline()
+          with open('public_key_receiver.txt', 'r') as pub_key_radio:
+              public_key_pair_string = pub_key_radio.readline()
+          public_key_pair_string2pair_step_1 = public_key_pair_string.split(', ')
+          public_key_pair_string2pair_step_2_a = public_key_pair_string2pair_step_1[0].removeprefix('(')
+          public_key_pair_string2pair_step_2_b = public_key_pair_string2pair_step_1[1].removesuffix(')')
+          public_rsa_key_pair = int(public_key_pair_string2pair_step_2_a), int(public_key_pair_string2pair_step_2_b)
+          rsa_encrypt_service = RSA(public_rsa_key_pair)
+          encoded_password = Encode2int(des_pwd)
+          encrypted_password = rsa_encrypt_service.Encrypt(encoded_password)
+          encrypted_des_pwd_chr = Decode2chr(encrypted_password)
+          with open('outbox/encrypted_pwd_des.txt', 'w') as encrypted_des_pwd_container:
+              encrypted_des_pwd_container.write(str(encrypted_des_pwd_chr))
+              print("DES password has been encrypted.")
+   
+    ```
+3. 对确保信息完整性和一致性的散列值用发送方的非对称加密私钥进行加密作为“签名”，使发送方无法否认文件由他发送。
+   ```python
+    def signature():
+        with open('sandbox_sender/private_key_sender.txt', 'r') as private_key_container:
+            private_key_pair_string = private_key_container.readline()
+        private_key_pair_string2pair_step_1 = private_key_pair_string.split(', ')
+        private_key_pair_string2pair_step_2_a = private_key_pair_string2pair_step_1[0].removeprefix('(')
+        private_key_pair_string2pair_step_2_b = private_key_pair_string2pair_step_1[1].removesuffix(')')
+        private_rsa_key_pair = int(private_key_pair_string2pair_step_2_a), int(private_key_pair_string2pair_step_2_b)
+        rsa_encrypt_service = RSA(private_rsa_key_pair)
+        encoded_hash = Encode2int(hash_abstract())
+        encrypted_hash = rsa_encrypt_service.Encrypt(encoded_hash)
+        encrypted_hash_chr = Decode2chr(encrypted_hash)
+        with open('outbox/encrypted_hash.txt', 'w') as hash_container_to_send:
+            hash_container_to_send.write(str(encrypted_hash_chr))
+        print("Hash has been signed (encrypted).")
+   ```
+
+因此，发送方需要发送的文件显然是加密过后的信息`encrypted_msg.txt`、加密过后的对称密码`encrypted_pwd_des.txt`和加密过后的散列值`encrypted_hash.txt`三个。
+
+#### 接收方
+
+根据“发送方”章节中所提到的发送文件清单，接收方应当对这些文件有针对性地进行解密。不难得到他的任务如下：
+
+```python
+message_decrypt()
+hash_decrypt()
+hash_check()
+```
+
+1. 使用自己的非对称加密私钥对`encrypted_pwd_des.txt`进行解密，得到对称加密密码，随后凭此密码对`encrypted_msg.txt`进行解密，得到`decrypted_msg.txt`；
+    ```python
+    def des_pwd_decrypt():
+        with open('sent/encrypted_pwd_des.txt', 'r') as des_pwd_container:
+            des_pwd_encrypted = des_pwd_container.readline()
+        with open('sandbox_receiver/private_key_receiver.txt', 'r') as prv_key_radio:
+            private_key_pair_string = prv_key_radio.readline()
+        private_key_pair_string2pair_step_1 = private_key_pair_string.split(', ')
+        private_key_pair_string2pair_step_2_a = private_key_pair_string2pair_step_1[0].removeprefix('(')
+        private_key_pair_string2pair_step_2_b = private_key_pair_string2pair_step_1[1].removesuffix(')')
+        private_key_pair = int(private_key_pair_string2pair_step_2_a), int(private_key_pair_string2pair_step_2_b)
+        # print(public_key_pair_string2pair_step_2_a)
+        # print(public_key_pair_string2pair_step_2_b)
+        rsa_decrypt_service = RSA(private_key_pair)
+        encoded_encrypted_des_pwd = Encode2int(des_pwd_encrypted)
+        decrypted_encoded_des_pwd = rsa_decrypt_service.Decrypt(encoded_encrypted_des_pwd)
+        return str(Decode2chr(decrypted_encoded_des_pwd))
+
+
+    # The function to decrypt the message basing on the symmetric password decrypted (finished May 31 12:13 a.m.)
+    def message_decrypt():
+        decrypted_lines = ""
+        with open('sandbox_sender/desPassword.txt', 'r') as des_password_gotcha:
+            des_pwd = des_pwd_decrypt()
+        with open('sent/encrypted_msg.txt', 'r') as encrypted_message_container:
+            encrypted_message = encrypted_message_container.readline()
+        for i in range(int(len(encrypted_message) / 8)):
+            newTempText = [encrypted_message[j] for j in range(i * 8, i * 8 + 8)]
+            decrypted_lines = "".join([decrypted_lines, DES(newTempText, des_pwd, 1)])
+        # print(decrypted_lines)
+        with open('inbox/decrypted_msg.txt', 'w') as container_of_decrypted_contents:
+            container_of_decrypted_contents.write(decrypted_lines)
+        print("Message Decrypted.")
+    
+    ```
+2. 使用发送方的非对称加密公钥对`encrypted_hash.txt`进行解密，得到明文`decrypted_hash.txt`。随后自己再生成一次解密后的信息和密码对应的散列值，与`decrypted_hash.txt`进行比较；如果相同则代表信息在传输途中未被修改。
+    ```python
+    def hash_decrypt():
+    with open('sent/encrypted_hash.txt', 'r') as hash_receipt:
+        encrypted_hash = hash_receipt.readline()
+    with open('public_key_sender.txt', 'r') as public_key_sender:
+        public_key_sender_string = public_key_sender.readline()
+    public_key_pair_string2pair_step_1 = public_key_sender_string.split(', ')
+    public_key_pair_string2pair_step_2_a = public_key_pair_string2pair_step_1[0].removeprefix('(')
+    public_key_pair_string2pair_step_2_b = public_key_pair_string2pair_step_1[1].removesuffix(')')
+    public_rsa_key_pair = int(public_key_pair_string2pair_step_2_a), int(public_key_pair_string2pair_step_2_b)
+    rsa_decrypt_service = RSA(public_rsa_key_pair)
+    encoded_hash = Encode2int(encrypted_hash)
+    encrypted_hash = rsa_decrypt_service.Decrypt(encoded_hash)
+    encrypted_hash_chr = Decode2chr(encrypted_hash)
+    with open('inbox/hash_decrypted.txt', 'w') as decrypted_hash:
+        decrypted_hash.write(str(encrypted_hash_chr))
+    print("Hash Decrypted.")
+
+
+    def hash_check():
+        with open('inbox/hash_decrypted.txt', 'r') as hash_decrypted:
+            hash_received = hash_decrypted.readline()
+            hash_received_list = hash_received.split(" ")
+        hash_received_1 = hash_received_list[0]
+        hash_received_2 = hash_received_list[1]
+        with open('sent/encrypted_msg.txt', 'r') as sample:
+            message = sample.read()
+        with open('sent/encrypted_pwd_des.txt', 'r') as encrypted_pwd:
+            password = encrypted_pwd.readline()
+        message_hash = MD5(message)
+        message_hash.fill_text()
+        message_hash_str = message_hash.group_processing()
+        if hash_received_1 != message_hash_str:
+            print(message_hash_str)
+            print("FATAL: Message has been modified half way.")
+        password_hash = MD5(password)
+        password_hash.fill_text()
+        password_hash_str = password_hash.group_processing()
+        if hash_received_2 != password_hash_str:
+            print("FATAL: Symmetric password has been modified half way.")
+        if hash_received_1 == message_hash_str and hash_received_2 == password_hash_str:
+            print("Message not vandalized. Transmit success.")
+
+    ```
 ### 操作记录
+
+根据上述运行一系列程序。首先运行的是`initialization.py`文件，对整个实验环境进行初始化。初始化完成后的输出结果和文件架构如下图所示；可以看到，目前的文件树只有`sandbox_sender`中有文件。这两个文件分别是待处理和发送的信息和对称加密密码。
+
+<img src="IMG/fcSS1.png" />
+
+随后运行`fileCipher_keyProvider.py`。运行后的结果如图所示；此时该程式通过随机生成的质数197和239产生了发送方的非对称加密公私钥，并将前者放置在公共空间，将后者放置在`sandbox_sender`中；类似地，随机生成的质数157和239产生了接收方的非对称加密公私钥，并将前者放置在公共空间，将后者放置在`sandbox_receiver`中。
+
+<img src="IMG/fcSS2.png" />
+
+此时运行`fileCipher_sender.py`。运行后的结果如图所示；此时文件树已经在`outbox`中出现了信息、对称密码和散列值加密后的文件。
+
+<img src="IMG/fcSS3.png" />
+
+随后运行`fileTransmit.py`。运行后，`outbox`中的文件已经全部转移至`sent`。
+
+<img src="IMG/fcSS4.png" />
+
+之后运行`fileCipher_receiver.py`。运行后，在`inbox`中得到信息明文和散列值。将信息明文`decrypted_msg.txt`与原信息`sample.txt`对比，发现文本内容一致；程式将解密后的散列值文件`decrypted_hash.txt`中的两段散列值分别与根据解密所得信息和对称加密密码重新生成的散列值进行比较，发现两散列值均一致，故输出信息未被损坏（“Message not vandalized”），进而得到传输成功的结论。
+
+<img src="IMG/fcSS5.png" />
+
+### 实验心得
+
+
